@@ -7,6 +7,7 @@
 
 #ifndef LEDMATRIXPANEL_H_
 #define LEDMATRIXPANEL_H_
+#include <Arduino.h>
 /**
  * class to drive led matric panel (china stuff) via HUB08 etc. code is partly copied from Adafruit RGBMatrixPanel
  * see https://github.com/adafruit/RGB-matrix-Panel
@@ -32,7 +33,17 @@ public:
 
 	void begin();
 
+	void clear();
+
 	void setPixel(uint8_t x, uint8_t y, boolean on);
+
+	uint16_t getHeight() const {
+		return height;
+	}
+
+	uint16_t getWidth() const {
+		return width;
+	}
 
 private:
 
@@ -61,9 +72,11 @@ private:
 
 	uint8_t colorsChannels; // color channels to use: 1 = monochrom, 2 = RG, 3 = RGB
 
-	uint8_t scanCycle; // the actual scan cycle
+	volatile uint8_t plane;
 
-	uint8_t plane;
+	volatile uint8_t actBuffer;
+
+	volatile boolean blank;
 
 };
 

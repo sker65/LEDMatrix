@@ -52,6 +52,8 @@
 #define SCLKPORT PORTB
 #endif
 
+static LEDMatrixPanel *activePanel = NULL;
+
 LEDMatrixPanel::LEDMatrixPanel(uint8_t a, uint8_t b, uint8_t c, uint8_t d,
 		uint8_t sclk, uint8_t latch, uint8_t oe, uint8_t width, uint8_t height,
 		uint8_t planes, uint8_t colorChannels) {
@@ -101,94 +103,15 @@ LEDMatrixPanel::LEDMatrixPanel(uint8_t a, uint8_t b, uint8_t c, uint8_t d,
 		buffptr[i] = (volatile uint8_t*) malloc(buffersize);
 		memset((void*)buffptr[i], 0xFF, buffersize);
 	}
-
-	scanCycle = 0;
 	plane = 0;
-
+	actBuffer = 0;
+	blank=true;
 }
 
 LEDMatrixPanel::~LEDMatrixPanel() {
 	// release memory
 }
 
-void LEDMatrixPanel::selectPlane() {
-	// output new plane address
-	if (plane & 0x1)
-		*addraport |= addrapin;
-	else
-		*addraport &= ~addrapin;
-	if (plane & 0x2)
-		*addrbport |= addrbpin;
-	else
-		*addrbport &= ~addrbpin;
-	if (plane & 0x4)
-		*addrcport |= addrcpin;
-	else
-		*addrcport &= ~addrcpin;
-	if (planes > 8) {
-		if (plane & 0x8)
-			*addrdport |= addrdpin;
-		else
-			*addrdport &= ~addrdpin;
-	}
-}
-
-void LEDMatrixPanel::updateScreen() {
-	// called periodically to refresh led matrix
-
-	disableLEDs();
-
-	selectPlane();
-
-	// shift out plane data
-
-	// Record current state of SCLKPORT register, as well as a second
-	// copy with the clock bit set.  This makes the innnermost data-
-	// pushing loops faster, as they can just set the PORT state and
-	// not have to load/modify/store bits every single time.  It's a
-	// somewhat rude trick that ONLY works because the interrupt
-	// handler is set ISR_BLOCK, halting any other interrupts that
-	// might otherwise also be twiddling the port at the same time
-	// (else this would clobber them).
-
-	uint8_t tick, tock,  *ptr, *ptr1;
-	uint8_t p1, p2;
-
-	tock = SCLKPORT;
-	tick = tock | sclkpin;
-
-	// erst mal nur den low buffer
-
-	ptr = (uint8_t *) buffptr[0] + plane * width / 4;
-	ptr1 = (uint8_t *) buffptr[1] + plane * width / 4;
-
-	for (uint8_t xb = 0; xb < width / 4; xb++) { // weil 2 bits geshifted wird
-
-		p1 = *ptr++;
-		for (int j = 0; j < 4; j++) { // nur 4 shifts da pro ausgabe 2 pixel
-			DATAPORT = p1 & 0b11000000;
-			// shift out
-			SCLKPORT = tick;	// Clock lo
-			SCLKPORT = tock; // Clock hi
-			p1 <<= 2;
-		}
-
-	} // bytes to shift
-
-	*latport &= ~latpin;  // Latch down
-
-	*latport |= latpin; // Latch data loaded
-
-	plane++;
-	if (plane >= planes) {
-		plane = 0;
-		scanCycle++;
-		if (scanCycle >= 8) {
-			scanCycle = 0;
-		}
-	}
-
-}
 
 void LEDMatrixPanel::begin() {
 // Enable all comm & address pins as outputs, set default states:
@@ -217,6 +140,112 @@ void LEDMatrixPanel::begin() {
 // maybe extend to simultaneously drive two colors at once (synchronous)
 	DATAPORT = 0b11000000;
 
+	activePanel = this;
+
+	 // Set up Timer1 for interrupt:
+	TCCR1A = _BV(WGM11); // Mode 14 (fast PWM), OC1A off
+	TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10); // Mode 14, no prescale
+	ICR1 = 100;
+	TIMSK1 |= _BV(TOIE1); // Enable Timer1 interrupt
+	sei();
+}
+
+void LEDMatrixPanel::selectPlane() {
+	// output new plane address
+	if (plane & 0x1)
+		*addraport |= addrapin;
+	else
+		*addraport &= ~addrapin;
+	if (plane & 0x2)
+		*addrbport |= addrbpin;
+	else
+		*addrbport &= ~addrbpin;
+	if (plane & 0x4)
+		*addrcport |= addrcpin;
+	else
+		*addrcport &= ~addrcpin;
+	if (planes > 8) {
+		if (plane & 0x8)
+			*addrdport |= addrdpin;
+		else
+			*addrdport &= ~addrdpin;
+	}
+}
+
+void LEDMatrixPanel::updateScreen() {
+	// called periodically to refresh led matrix
+
+	disableLEDs();
+	uint16_t duration = 300; // overall brightness
+
+	if( blank ) {
+		blank = !blank;
+		ICR1 = duration; // Set interval for next interrupt
+		TCNT1 = 0; // Restart interrupt timer
+		return;
+	}
+
+
+	selectPlane();
+
+	// shift out plane data
+
+	// Record current state of SCLKPORT register, as well as a second
+	// copy with the clock bit set.  This makes the innnermost data-
+	// pushing loops faster, as they can just set the PORT state and
+	// not have to load/modify/store bits every single time.  It's a
+	// somewhat rude trick that ONLY works because the interrupt
+	// handler is set ISR_BLOCK, halting any other interrupts that
+	// might otherwise also be twiddling the port at the same time
+	// (else this would clobber them).
+
+	uint8_t tick, tock,  *ptr;
+	uint8_t p1;
+
+	tock = SCLKPORT;
+	tick = tock | sclkpin;
+
+	ptr = (uint8_t *) buffptr[actBuffer] + plane * width / 4;
+
+	for (uint8_t xb = 0; xb < width / 4; xb++) { // weil 2 bits geshifted wird
+
+		p1 = *ptr++;
+		for (int j = 0; j < 4; j++) { // nur 4 shifts da pro ausgabe 2 pixel
+			DATAPORT = p1 & 0b11000000;
+			// shift out
+			SCLKPORT = tick;	// Clock lo
+			SCLKPORT = tock; // Clock hi
+			p1 <<= 2;
+		}
+
+	} // bytes to shift
+
+	*latport &= ~latpin;  // Latch down
+	*latport |= latpin; // Latch data loaded
+
+	plane++;
+	if (plane >= planes) {
+		plane = 0;
+		actBuffer++;
+		if (actBuffer >= nBuffers) {
+			actBuffer = 0;
+		}
+	}
+	enableLEDs();
+//	delayMicroseconds(70+actBuffer*100); // longer for the second buffer
+//	disableLEDs();
+
+	duration = 11	00+actBuffer*2000;
+
+	ICR1 = duration; // Set interval for next interrupt
+	TCNT1 = 0; // Restart interrupt timer
+
+}
+
+// interrupt handling
+ISR(TIMER1_OVF_vect, ISR_BLOCK) { // ISR_BLOCK important -- see notes later
+	activePanel->updateScreen(); // Call refresh func for active display
+	TIFR1 |= TOV1; // Clear Timer1 interrupt flag
 }
 
 void LEDMatrixPanel::enableLEDs() {
@@ -261,4 +290,11 @@ void LEDMatrixPanel::setPixel(uint8_t x, uint8_t y, boolean on) {
 		*ptr = pix | ~ mask[(x&3)+bitpos];
 	}
 
+}
+
+void LEDMatrixPanel::clear() {
+	for( int i = 0; i<buffersize; i++) {
+		buffptr[0][i]=0xff;
+		buffptr[1][i]=0xff;
+	}
 }
