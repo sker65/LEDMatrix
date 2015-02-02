@@ -27,19 +27,14 @@
 	</natures>
 	<linkedResources>
 		<link>
-			<name>Libraries/Adafruit-GFX</name>
-			<type>2</type>
-			<locationURI>ArduinoPivateLibPath/Adafruit-GFX</locationURI>
-		</link>
-		<link>
-			<name>Libraries/RGB-matrix-Panel</name>
-			<type>2</type>
-			<locationURI>ArduinoPivateLibPath/RGB-matrix-Panel</locationURI>
-		</link>
-		<link>
 			<name>Libraries/RTClib</name>
 			<type>2</type>
 			<locationURI>ArduinoPivateLibPath/RTClib</locationURI>
+		</link>
+		<link>
+			<name>Libraries/SdFat</name>
+			<type>2</type>
+			<locationURI>ArduinoPivateLibPath/SdFat</locationURI>
 		</link>
 		<link>
 			<name>Libraries/Wire</name>
