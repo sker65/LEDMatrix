@@ -23,33 +23,44 @@ RTC_DS1307 rtc;
 Clock clock(panel, rtc);
 
 SdFat SD;
-Animation animation(SD, panel);
+Animation animation(SD, panel, clock);
 
 #define SD_CS_PIN 53
+#define VERSION "go dmd v1.0"
 
 //The setup function is called once at startup of the sketch
 void setup() {
 	Serial.begin(57600);
 	Serial.println("calling panel begin");
 	panel.begin();
+	int z = 0;
 	pinMode(13,OUTPUT);
+	panel.writeText(VERSION,0,0 * 8);
 	Serial.println("calling wire begin");
+//	panel.writeText("starting wire",0,z++ * 8);
 	Wire.begin();
 	Serial.println("calling rtc begin");
+	panel.writeText("rtc ..",0,1 * 8);
 	rtc.begin();
 
 	pinMode(SD_CS_PIN, OUTPUT);
 	Serial.println("calling sd card begin");
+	panel.writeText("sd card ..",0,2 * 8);
 
 	if( !SD.begin(SD_CS_PIN,SPI_FULL_SPEED) ){
 		Serial.println("sd card begin failed");
+		panel.writeText("sd card failed",0,3 * 8);
+		delay(12000);
 	} else {
 		Serial.println("sd card begin success");
+		delay(500);
+		panel.writeText("boot ok (c) 2015",0,2 * 8);
+		panel.writeText("        by Steve",0,3 * 8);
 	}
 
 	animation.begin();
-
-
+	delay(5000);
+	panel.clear();
 }
 
 // The loop function is called in an endless loop
@@ -59,15 +70,15 @@ void loop()
 	int led = HIGH;
 	long switchToAni = millis() + 2000;
 	while( true ) {
-		//delayMicroseconds(400);
+
 		long now = millis();
 
 		if( now < switchToAni ) {
 			clock.update(now);
 		} else {
-			if( animation.update(now) ) {
-				switchToAni = now + 2000;
-				panel.clear();
+			clock.off();
+			if( animation.update(now) ) { // true means ani finished
+				switchToAni = now + 2000; // millis to show clock
 			}
 		}
 

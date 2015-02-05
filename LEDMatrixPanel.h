@@ -35,7 +35,11 @@ public:
 
 	void clear();
 
+	void setTimePlaneBright(boolean bright) { timeBright = bright;}
+
 	void setPixel(uint8_t x, uint8_t y, boolean on);
+
+	void writeText(const char* text, uint8_t x, uint8_t y);
 
 	uint16_t getHeight() const {
 		return height;
@@ -59,6 +63,7 @@ private:
 			_oe, // output enable pin
 			_a, _b, _c, _d; // row adress pins
 
+	volatile boolean timeBright = false;
 	volatile uint8_t **buffptr; // array of back buffers
 
 	uint8_t planes; // planes / scanning pattern 1/16 scanning means 4 planes, 1/8 means means 3 planes

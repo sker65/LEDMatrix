@@ -9,10 +9,11 @@
 #define ANIMATION_H_
 #include "LEDMatrixPanel.h"
 #include <SdFat.h>
+#include "Clock.h"
 
 class Animation {
 public:
-	Animation(SdFat& sd, LEDMatrixPanel& panel);
+	Animation(SdFat& sd, LEDMatrixPanel& panel, Clock& clock);
 	virtual ~Animation();
 	void readNextAnimation();
 	void readNextFrame();
@@ -20,6 +21,7 @@ public:
 	void begin();
 
 protected:
+	Clock& clock;
 	SdFat& sd;
 	File ani;
 	LEDMatrixPanel& panel;
@@ -28,6 +30,12 @@ protected:
 
 	uint16_t actAnimation;
 	uint16_t actFrame;
+
+	uint8_t cycles;
+	uint8_t holdCycles;
+	uint16_t actFilePos;
+	uint8_t refreshDelay;
+	uint16_t clockFrom;
 
 	long nextAnimationUpdate;
 	boolean hold = false;

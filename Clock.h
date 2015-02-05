@@ -19,19 +19,23 @@ public:
 	Clock(LEDMatrixPanel& panel, RTC_DS1307& rtc);
 	void update(long now);
 	virtual ~Clock();
+	void on();
+	void writeTime(long now);
+	void off();
+	void clear();
+	boolean isClockOn() { return active;}
 
 protected:
 
-	void writeTime(boolean tick);
 	void writeDigit(int digit, int xoffset);
 
 	RTC_DS1307* rtc;
 	LEDMatrixPanel& panel;
 	long nextClockRefresh;
 	long nextRtcSync;
-
-
+	int glowCount;
 	DateTime n;
+	boolean active;
 
 };
 
