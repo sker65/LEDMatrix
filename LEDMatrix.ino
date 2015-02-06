@@ -33,35 +33,39 @@ void setup() {
 	Serial.begin(57600);
 	Serial.println("calling panel begin");
 	panel.begin();
-	int z = 0;
 	pinMode(13,OUTPUT);
-	panel.writeText(VERSION,0,0 * 8);
+	panel.println(VERSION);
 	Serial.println("calling wire begin");
-//	panel.writeText("starting wire",0,z++ * 8);
+	panel.println("start wire ..");
 	Wire.begin();
 	Serial.println("calling rtc begin");
-	panel.writeText("rtc ..",0,1 * 8);
+	panel.println("start rtc ..");
 	rtc.begin();
 
 	pinMode(SD_CS_PIN, OUTPUT);
 	Serial.println("calling sd card begin");
-	panel.writeText("sd card ..",0,2 * 8);
+	panel.println("start sd card ..");
 
 	if( !SD.begin(SD_CS_PIN,SPI_FULL_SPEED) ){
 		Serial.println("sd card begin failed");
-		panel.writeText("sd card failed",0,3 * 8);
+		panel.println("sd card failed");
 		delay(12000);
 	} else {
 		Serial.println("sd card begin success");
 		delay(500);
-		panel.writeText("boot ok (c) 2015",0,2 * 8);
-		panel.writeText("        by Steve",0,3 * 8);
+		panel.println("boot ok!");
+		panel.println("(c)2015 by Steve");
 	}
 
-	animation.begin();
+	if( !animation.begin() ) {
+		panel.println("init anis failed");
+		panel.println("*.ani not found");
+	}
 	delay(5000);
 	panel.clear();
 }
+
+int clockShowTime = 2000; // millis to show clock
 
 // The loop function is called in an endless loop
 void loop()
@@ -69,17 +73,27 @@ void loop()
 	long count = 0;
 	int led = HIGH;
 	long switchToAni = millis() + 2000;
+	clock.on();
+	byte state = 0;
 	while( true ) {
 
 		long now = millis();
 
-		if( now < switchToAni ) {
-			clock.update(now);
-		} else {
-			clock.off();
-			if( animation.update(now) ) { // true means ani finished
-				switchToAni = now + 2000; // millis to show clock
+		switch( state ) {
+		case 0:
+			if( now > switchToAni ) {
+				state = 1;
+				clock.off();
 			}
+			clock.update(now);
+			break;
+		case 1:
+			if( animation.update(now) ) { // true means ani finished
+				switchToAni = now + clockShowTime; // millis to show clock
+				clock.on();
+				state = 0;
+			}
+			break;
 		}
 
 		count++;
