@@ -35,11 +35,14 @@ public:
 
 	void clear();
 
-	void setTimePlaneBright(boolean bright) { timeBright = bright;}
+	void setTimeBrightness(uint8_t bright) { timeBright = bright;}
 
 	void setPixel(uint8_t x, uint8_t y, boolean on);
 
-	void writeText(const char* text, uint8_t x, uint8_t y);
+	void writeText(const char* text, uint8_t x, uint8_t y, int len);
+	void println(const char* text);
+	void scrollUp();
+
 
 	uint16_t getHeight() const {
 		return height;
@@ -63,7 +66,7 @@ private:
 			_oe, // output enable pin
 			_a, _b, _c, _d; // row adress pins
 
-	volatile boolean timeBright = false;
+	volatile uint8_t timeBright = 0;
 	volatile uint8_t **buffptr; // array of back buffers
 
 	uint8_t planes; // planes / scanning pattern 1/16 scanning means 4 planes, 1/8 means means 3 planes
@@ -76,6 +79,9 @@ private:
 	uint8_t nBuffers; // how many buffers in use
 
 	uint8_t colorsChannels; // color channels to use: 1 = monochrom, 2 = RG, 3 = RGB
+
+	char textbuffer[4][16]; // text buffer for text output (boot / menü)
+	uint8_t col, row;
 
 	volatile uint8_t plane;
 
