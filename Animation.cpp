@@ -17,8 +17,9 @@ sd(sd), panel(panel), clock(clock) {
 	numberOfFrames=0;
 }
 
-void Animation::begin() {
+boolean Animation::begin() {
 	ani = sd.open("/FOO.ANI");
+	if( !ani.isOpen() ) return false;
 	// read 4 header ANIM
 	ani.seekCur(4);
 	// read 2 byte version (1)
@@ -28,6 +29,7 @@ void Animation::begin() {
 	numberOfAnimations  = ani.read()*256+ani.read();
 	Serial.print("number of animations: "); Serial.println(numberOfAnimations);
 	// pos is now 8
+	return true;
 }
 
 void readString(File& f) {
@@ -52,9 +54,13 @@ void Animation::readNextAnimation() {
 
 	// clock from 2
 	clockFrom = ani.read()*256+ani.read();
+	//clockFrom = 5;
 	Serial.print("clockFrom: ");Serial.println(clockFrom);
-	ani.seekCur(5);
 	// clock small (1 Byte)
+	ani.read();
+	// clock in front (1 Byte)
+	clockInFront = ani.read() != 0;
+	ani.seekCur(4);
 	// clock x / y offset je 2
 	// refresh delay 2
 	refreshDelay = ani.read()*256+ani.read();
@@ -69,13 +75,18 @@ void Animation::readNextAnimation() {
 	actAnimation++;
 }
 
-void Animation::readNextFrame() {
+void Animation::readNextFrame(long now, bool mask) {
 	uint16_t buflen = ani.read()*256+ani.read();
 	if( panel.getSizeOfBufferInByte() == buflen ) {
-		int r = ani.readBytes(panel.getBuffers()[0], buflen);
-		r += ani.readBytes(panel.getBuffers()[1], buflen);
-		//Serial.print("reading 2 buffers len: ");Serial.print(buflen);Serial.println(r);
-//		Serial.print("reading frame: ");Serial.println(actFrame);
+		byte buf[buflen];
+		int r = ani.readBytes(buf, buflen);
+		if( mask ) clock.writeTime(now,buf);
+		memmove(panel.getBuffers()[0],buf,buflen);
+		r += ani.readBytes(buf, buflen);
+		if( mask ) clock.writeTime(now,buf);
+		memmove(panel.getBuffers()[1],buf,buflen);
+		//      Serial.print("reading 2 buffers len: ");Serial.print(buflen);Serial.println(r);
+		//		Serial.print("reading frame: ");Serial.println(actFrame);
 	}
 	actFrame++;
 }
@@ -85,7 +96,6 @@ boolean Animation::update(long now) {
 		if( hold ) {
 			hold = false;
 			panel.clear();
-			clock.on();
 			return true;
 		}
 		nextAnimationUpdate = now + refreshDelay;
@@ -97,11 +107,13 @@ boolean Animation::update(long now) {
 			readNextAnimation();
 		}
 
-		readNextFrame();
+		readNextFrame(now, clockInFront);
 		if( actFrame >= clockFrom ) {
+			// debug   panel.setPixel(0,0,true);
 			clock.on();
+			// if clock is in front force update
 			clock.update(now);
-			// write with mask / mot only with update
+			// write with mask / not only with update
 		}
 		// todo raus ziehen in den Handler
 		if( actFrame >= numberOfFrames ) { // ende der ani, check auf cycle
