@@ -16,9 +16,9 @@ public:
 	Animation(SdFat& sd, LEDMatrixPanel& panel, Clock& clock);
 	virtual ~Animation();
 	void readNextAnimation();
-	void readNextFrame();
+	void readNextFrame(long now, bool mask);
 	boolean update(long now);
-	void begin();
+	boolean begin();
 
 protected:
 	Clock& clock;
@@ -39,6 +39,7 @@ protected:
 
 	long nextAnimationUpdate;
 	boolean hold = false;
+	boolean clockInFront = false;
 };
 
 #endif /* ANIMATION_H_ */
