@@ -106,6 +106,15 @@ LEDMatrixPanel::LEDMatrixPanel(uint8_t a, uint8_t b, uint8_t c, uint8_t d,
 	plane = 0;
 	actBuffer = 0;
 	blank=true;
+
+	// init text
+	col = row = 0;
+	// clear text buffer
+	for(int c = 0; c <16; c++ ) {
+		for(int r=0; r<4;r++) {
+			textbuffer[r][c] = ' ';
+		}
+	}
 }
 
 LEDMatrixPanel::~LEDMatrixPanel() {
@@ -136,9 +145,12 @@ void LEDMatrixPanel::begin() {
 	//DATADIR = !(255 >> ( bitsPerPixel * colorsChannels));
 	pinMode(30,OUTPUT);
 	pinMode(31,OUTPUT);
+	// green
+	pinMode(32,OUTPUT);
+	pinMode(33,OUTPUT);
 
 // maybe extend to simultaneously drive two colors at once (synchronous)
-	DATAPORT = 0b11000000;
+	DATAPORT = 0b11110000;
 
 	activePanel = this;
 
@@ -211,7 +223,12 @@ void LEDMatrixPanel::updateScreen() {
 
 		p1 = *ptr++;
 		for (int j = 0; j < 4; j++) { // nur 4 shifts da pro ausgabe 2 pixel
-			DATAPORT = p1 & 0b11000000;
+			if( actBuffer!=2) {
+				DATAPORT = (p1 & 0b11000000) | 0b00110000;
+			}
+			else {
+				DATAPORT = (p1 & 0b11000000)>>2 | 0b11000000;
+			}
 			// shift out
 			SCLKPORT = tick;	// Clock lo
 			SCLKPORT = tock; // Clock hi
@@ -224,7 +241,8 @@ void LEDMatrixPanel::updateScreen() {
 	*latport |= latpin; // Latch data loaded
 
 	duration = 800;
-	if( actBuffer==1 || (actBuffer==2 && timeBright)) duration +=2300;
+	if( actBuffer==1 ) duration +=2300;
+	if( actBuffer==2 ) duration +=timeBright*800;
 
 	plane++;
 	if (plane >= planes) {
@@ -280,7 +298,8 @@ void LEDMatrixPanel::setPixel(uint8_t x, uint8_t y, boolean on) {
 		bitpos = 4;
 		yoffset = (y - height/2 ) * (width/4);
 	}
-	uint8_t* ptr =  (uint8_t *) buffptr[0] + yoffset  + x/4;
+
+	uint8_t* ptr =  (uint8_t *) buffptr[1] + yoffset  + x/4;
 	uint8_t pix = *ptr;
 
 	if( on ) {
@@ -298,6 +317,7 @@ void LEDMatrixPanel::clear() {
 	}
 }
 
+// font mit 96 ascii zeichen ab 32 - 128
 char font8[96][8] = {
 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // U+0020 (space)
 { 0x18, 0x3C, 0x3C, 0x18, 0x18, 0x00, 0x18, 0x00}, // U+0021 (!)
@@ -397,11 +417,45 @@ char font8[96][8] = {
 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} // U+007F
 };
 
+void LEDMatrixPanel::println(const char* text) {
+	char ch;
+	if( row == 4) {
+		scrollUp();
+		row=3;
+	}
+	for(int c = 0; c<16; c++) {
+		ch = text[c];
+		if( ch == '\0' ) break;
+		textbuffer[row][c] = ch;
+	}
+	writeText(textbuffer[row],0,row*8,16);
+	row++;
+}
 
-void LEDMatrixPanel::writeText(const char* text, uint8_t x, uint8_t y) {
+void LEDMatrixPanel::scrollUp() {
+	// copy up
+	for(int r=1; r<4; r++) {
+		for(int c = 0; c<16; c++) {
+			textbuffer[r-1][c] = textbuffer[r][c];
+		}
+	}
+	// clear last line
+	for(int c = 0; c<16; c++) {
+		textbuffer[3][c] = ' ';
+	}
+	clear();
+	// redraw first three
+	for(int r=0; r<3; r++) {
+		writeText(textbuffer[r],0,r*8,16);
+	}
+
+}
+
+
+void LEDMatrixPanel::writeText(const char* text, uint8_t x, uint8_t y, int len) {
 	const char* p = text;
 	int j = 0;
-	while( *p != 0) {
+	while( *p != 0 && j<len) {
 		int ch = *p++;
 		if( ch >= 32 ) {
 			ch -= 32;
