@@ -42,7 +42,8 @@ public:
 	void writeText(const char* text, uint8_t x, uint8_t y, int len);
 	void println(const char* text);
 	void scrollUp();
-
+	void setTimeColor(uint8_t col);// { timeColor = col; }
+	void setAnimationColor(uint8_t col);// { aniColor = col; }
 
 	uint16_t getHeight() const {
 		return height;
@@ -88,6 +89,9 @@ private:
 	volatile uint8_t actBuffer;
 
 	volatile boolean blank;
+
+	volatile uint8_t timeColor;
+	volatile uint8_t aniColor;
 
 };
 

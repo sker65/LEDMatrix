@@ -8,6 +8,7 @@
 #include <Arduino.h>
 
 #include "LEDMatrixPanel.h"
+#include <avr/pgmspace.h>
 
 // use this to control the color resolution per pixel per color channel
 #define bitsPerPixel 2
@@ -106,6 +107,8 @@ LEDMatrixPanel::LEDMatrixPanel(uint8_t a, uint8_t b, uint8_t c, uint8_t d,
 	plane = 0;
 	actBuffer = 0;
 	blank=true;
+	timeColor = 0;
+	aniColor = 0;
 
 	// init text
 	col = row = 0;
@@ -219,15 +222,27 @@ void LEDMatrixPanel::updateScreen() {
 
 	ptr = (uint8_t *) buffptr[actBuffer] + plane * width / 4;
 
+	uint8_t col = 0;
+
+	if (actBuffer == 2) { // clock plane
+		col = timeColor;
+	} else {
+		col = aniColor;
+	}
+
 	for (uint8_t xb = 0; xb < width / 4; xb++) { // weil 2 bits geshifted wird
 
 		p1 = *ptr++;
 		for (int j = 0; j < 4; j++) { // nur 4 shifts da pro ausgabe 2 pixel
-			if( actBuffer!=2) {
-				DATAPORT = (p1 & 0b11000000) | 0b00110000;
-			}
-			else {
+
+			if( col == 1) {
+				// green
 				DATAPORT = (p1 & 0b11000000)>>2 | 0b11000000;
+			} else if( col == 0) {
+				// red
+				DATAPORT = (p1 & 0b11000000) | 0b00110000;
+			} else {
+				DATAPORT = (p1 & 0b11000000) | ((p1 & 0b11000000)>>2);
 			}
 			// shift out
 			SCLKPORT = tick;	// Clock lo
@@ -318,7 +333,9 @@ void LEDMatrixPanel::clear() {
 }
 
 // font mit 96 ascii zeichen ab 32 - 128
-char font8[96][8] = {
+// PROGMEM sorgt dafür dass die konstanten Pixel Daten im Flash landen
+// und nicht im RAM!!
+PROGMEM const char font8[96][8] = {
 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // U+0020 (space)
 { 0x18, 0x3C, 0x3C, 0x18, 0x18, 0x00, 0x18, 0x00}, // U+0021 (!)
 { 0x36, 0x36, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // U+0022 (")
@@ -461,10 +478,21 @@ void LEDMatrixPanel::writeText(const char* text, uint8_t x, uint8_t y, int len) 
 			ch -= 32;
 			for(int i = 0; i<8; i++) {
 				for( int k = 0; k <8; k++) {
-					setPixel(x+k+j*8,y+i, font8[ch][i] & (1<<k));
+					setPixel(x+k+j*8,y+i,
+							// use pgm_read_byte to read from flash
+							pgm_read_byte(&(font8[ch][i]))
+							& (1<<k));
 				}
 			}
 		}
 		j++;
 	}
+}
+
+void LEDMatrixPanel::setTimeColor(uint8_t col) {
+	this->timeColor = col;
+}
+
+void LEDMatrixPanel::setAnimationColor(uint8_t col) {
+	this->aniColor = col;
 }
