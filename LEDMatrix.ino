@@ -2,6 +2,7 @@
 #include "LEDMatrixPanel.h"
 #include "Clock.h"
 #include "Animation.h"
+#include "Menu.h"
 
 #include <SdFat.h>
 
@@ -24,6 +25,8 @@ Clock clock(panel, rtc);
 
 SdFat SD;
 Animation animation(SD, panel, clock);
+
+Menu menu(&panel, &clock);
 
 #define SD_CS_PIN 53
 #define VERSION "go dmd v1.0"
@@ -61,8 +64,21 @@ void setup() {
 		panel.println("init anis failed");
 		panel.println("*.ani not found");
 	}
-	delay(5000);
+	//delay(5000);
 	panel.clear();
+}
+
+extern unsigned int __bss_end;
+//extern unsigned int __heap_start;
+extern void *__brkval;
+
+int freeMemory() {
+	int free_memory;
+	if ((int) __brkval == 0)
+		free_memory = ((int) &free_memory) - ((int) &__bss_end);
+	else
+		free_memory = ((int) &free_memory) - ((int) __brkval);
+	return free_memory;
 }
 
 int clockShowTime = 2000; // millis to show clock
@@ -75,9 +91,19 @@ void loop()
 	long switchToAni = millis() + 2000;
 	clock.on();
 	byte state = 0;
+
+	Serial.print("free Ram: "); Serial.println(freeMemory());
+
+	panel.setAnimationColor(menu.getOption(SET_COLOR_ANI));
+	panel.setTimeColor(menu.getOption(SET_COLOR_CLOCK));
+
 	while( true ) {
 
 		long now = millis();
+
+		menu.update(now);
+
+		if( menu.isActive() ) state = 2;
 
 		switch( state ) {
 		case 0:
@@ -94,10 +120,19 @@ void loop()
 				state = 0;
 			}
 			break;
+		case 2:
+			if( !menu.isActive()) {
+				// menu is finish / clock is set, but reconfige ani / panel
+				//TODO will not work for switching modes
+				panel.setAnimationColor(menu.getOption(SET_COLOR_ANI));
+				panel.setTimeColor(menu.getOption(SET_COLOR_CLOCK));
+				state = 0;
+			}
+			break;
 		}
 
 		count++;
-		if( count > 100) {
+		if( count > 1000) {
 
 //			panel.setPixel(random(WIDTH),random(HEIGHT),random(2)==1);
 
@@ -109,48 +144,4 @@ void loop()
 	}
 }
 
-//	File root = SD.open("/");
-//
-//	printDirectory(root, 0);
-//
-//	SdVolume* vol = SD.vol();
-//	Serial.print(vol->freeClusterCount()); Serial.println(" clusters free.");
-
-//
-//	  //rtc.adjust(DateTime(2015, 1, 29, 0, 28, 50));
-//	  if (! rtc.isrunning()) {
-//	    Serial.println("RTC is NOT running!");
-//	    // following line sets the RTC to the date & time this sketch was compiled
-//	    //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-//	    // This line sets the RTC with an explicit date & time, for example to set
-//	    // January 21, 2014 at 3am you would call:
-//	    //rtc.adjust(DateTime(2015, 1, 29, 0, 14, 0));
-//	  }
-
-#if false
-void printDirectory(File dir, int numTabs) {
-   while(true) {
-
-     File entry =  dir.openNextFile();
-     if (! entry) {
-       // no more files
-       //Serial.println("**nomorefiles**");
-       break;
-     }
-     for (uint8_t i=0; i<numTabs; i++) {
-       Serial.print('\t');
-     }
-     Serial.print(entry.name());
-     if (entry.isDirectory()) {
-       Serial.println("/");
-       printDirectory(entry, numTabs+1);
-     } else {
-       // files have sizes, directories do not
-       Serial.print("\t\t");
-       Serial.println(entry.size(), DEC);
-     }
-     entry.close();
-   }
-}
-#endif
 
