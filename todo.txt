@@ -1,0 +1,23 @@
+Menü sollte hierarchisch sein:
+
+Zwei Knopf bedienung:
+
+B1 lang geht ist menü bzw. verlässt es wieder (oder nach timeout)
+B1 kurz blättert durch das Menü
+B2 blättert bzw. ändert die Menü-optionen
+
+0123456789012345
+Helligkeit        1-10
+Zeit-Stunden      0-23
+Zeit-Min  10er    0-5
+Zeit-Min  1er     0-9
+Zeit-Mode         H:M H:M:S
+Datum-Jahr        2014-2020
+Datum-Monat       1-12
+Datum-Tag         1-31
+Dauer-Zeit-Anz.   1-10
+Datum-Anzeige     an / aus
+Farbe-Ani.        rot / grun / amber / wechsel
+Farbe-Uhr         rot / grun / amber / wechsel
+Temperatur        an / aus
+PIR Mode          inaktiv / dim / no ani / switchoff
