@@ -82,6 +82,18 @@ int freeMemory() {
 }
 
 int clockShowTime = 2000; // millis to show clock
+int dateMode = 0;
+
+void reloadConfig() {
+	panel.setAnimationColor(menu.getOption(SET_COLOR_ANI));
+	panel.setTimeColor(menu.getOption(SET_COLOR_CLOCK));
+	panel.setBrightness(menu.getOption(SET_BRIGHTNESS));
+
+	Serial.print("set time mode: ");Serial.println(menu.getOption(SET_TIME_MODE));
+	clock.setShowSeconds(menu.getOption(SET_TIME_MODE)==1);
+	clockShowTime = 1500 * (menu.getOption(SET_TIME_DURATION)+1);
+	dateMode = menu.getOption(SET_DATE_MODE);
+}
 
 // The loop function is called in an endless loop
 void loop()
@@ -94,8 +106,9 @@ void loop()
 
 	Serial.print("free Ram: "); Serial.println(freeMemory());
 
-	panel.setAnimationColor(menu.getOption(SET_COLOR_ANI));
-	panel.setTimeColor(menu.getOption(SET_COLOR_CLOCK));
+	reloadConfig();
+
+	long switchToDateTime = millis() + 8000;
 
 	while( true ) {
 
@@ -104,6 +117,12 @@ void loop()
 		menu.update(now);
 
 		if( menu.isActive() ) state = 2;
+
+		if( dateMode == 1 && now > switchToDateTime ) {
+			boolean isShowingDate = clock.getIsShowingDate();
+			clock.setIsShowingDate(!isShowingDate);
+			switchToDateTime = now + isShowingDate?8000:2000; // date 2 sec / time 8
+		}
 
 		switch( state ) {
 		case 0:
@@ -123,24 +142,19 @@ void loop()
 		case 2:
 			if( !menu.isActive()) {
 				// menu is finish / clock is set, but reconfige ani / panel
-				//TODO will not work for switching modes
-				panel.setAnimationColor(menu.getOption(SET_COLOR_ANI));
-				panel.setTimeColor(menu.getOption(SET_COLOR_CLOCK));
+				reloadConfig();
 				state = 0;
 			}
 			break;
 		}
 
-		count++;
-		if( count > 1000) {
-
-//			panel.setPixel(random(WIDTH),random(HEIGHT),random(2)==1);
-
-			count = 0;
-			// toggle 13
-			led = (led==HIGH?LOW:HIGH);
-			digitalWrite(13,led);
-		}
+//		count++;
+//		if( count > 1000) {
+//			count = 0;
+//			// toggle pin 13 -> blick internal led to show i am alive
+//			led = (led==HIGH?LOW:HIGH);
+//			digitalWrite(13,led);
+//		}
 	}
 }
 
