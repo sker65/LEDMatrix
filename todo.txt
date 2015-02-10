@@ -1,6 +1,50 @@
+- Clock kann kein Datum anzeigen / keine Temperatur
+- farbwechsel in main loop-
+- uhrzeit / datum wechsel im main loop
+- evtl muss der doppelpunkt "schmäler" (1 Byte) werden
+- dto für den Punkt beim Datum
+- kleiner Font für Uhr
+- regler für die gesamte helligkeit
+
+- Chunk file format ala PNG
+2 Byte len, 2 byte chunk, len bytes
+
+ANIM -> header
+>00 02 VI 00 01 -> version info
+
+seq of animations
+
+>hi lo AN  ani data
+	name: hi lo (name len) alpha ...
+	cycles: 2
+	hold: 2
+	clockFrom: 2
+	clockSmall: 1
+	clockInFront: 1
+	clock x: 2
+	clock y: 2
+	delay: 2
+	type: 1
+	numberOfFrames: 2
+		seq of framessets:
+	>	Hi Lo FR
+		number of frames per set: 1
+		size of frame in bytes: 2
+		data: x
+
+- uhrzeit stimmt nicht (geht nach)
+   -> check wann wird one sec addiert?
+
+- helligkeits regelung LED:
+     an ende des interrupts, müssen die LED aus bleiben für einen Anteil der
+     Zeit die eigentlich gesetzt ist und zwar jedes zweite mal.
+     
+
+
+	
 Menü sollte hierarchisch sein:
 
-Zwei Knopf bedienung:
+Zwei/Ein Knopf bedienung:
 
 B1 lang geht ist menü bzw. verlässt es wieder (oder nach timeout)
 B1 kurz blättert durch das Menü
@@ -21,3 +65,4 @@ Farbe-Ani.        rot / grun / amber / wechsel
 Farbe-Uhr         rot / grun / amber / wechsel
 Temperatur        an / aus
 PIR Mode          inaktiv / dim / no ani / switchoff
+
