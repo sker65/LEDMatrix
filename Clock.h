@@ -21,6 +21,7 @@ public:
 	virtual ~Clock();
 	void on();
 	void writeTime(long now, byte* buffer = NULL);
+	void writeDate(long now, byte* buffer = NULL);
 	void off();
 	void clear();
 	boolean isClockOn() {
@@ -28,11 +29,20 @@ public:
 	}
 	void adjust(DateTime& dt);
 	DateTime& getActualTime();
+	void setShowSeconds(boolean show);
+
+	void setIsShowingDate(boolean isShowingDate) {
+		this->isShowingDate = isShowingDate;
+	}
+
+	boolean getIsShowingDate() const {
+		return isShowingDate;
+	}
 
 protected:
 
-	void writeDigit(int digit, int xoffset, byte* buffer = NULL);
-
+	void writeDigit(int digit, int xoffset, uint8_t nBytes, byte* buffer = NULL);
+	int writeDoubleDigit(int digit, int x, byte* buffer);
 	RTC_DS1307* rtc;
 	LEDMatrixPanel& panel;
 	long nextClockRefresh;
@@ -41,7 +51,8 @@ protected:
 	uint8_t brightness;
 	DateTime n;
 	boolean active;
-
+	boolean showSeconds;
+	boolean isShowingDate;
 
 };
 
