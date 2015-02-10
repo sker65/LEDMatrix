@@ -23,10 +23,11 @@
 #define SET_TIME_HOURS 1
 #define SET_TIME_TENMIN 2
 #define SET_TIME_ONEMIN 3
-#define SET_TIME_MODE 4
-#define SET_DATE_YEAR 5
-#define SET_DATE_MON 6
-#define SET_DATE_DAY 7
+#define SET_DATE_YEAR 4
+#define SET_DATE_MON 5
+#define SET_DATE_DAY 6
+
+#define SET_TIME_MODE 7
 
 #define SET_TIME_DURATION 8
 #define SET_DATE_MODE 9
@@ -57,6 +58,8 @@ public:
 	void redrawMenu();
 
 	void leaveMenu();
+
+	void saveOption();
 
 	uint8_t getOption(int index) {return option[index];}
 

@@ -24,22 +24,22 @@ const char* mmText[] = {
 		"Zeit-Min  1er     ",
 		"0","1","2","3","4","5","6","7","8","9",
 		".",
-		"Zeit-Mode         ",
-		"H:M", "H:M:S",
-		".",
 		"Datum-Jahr        ",
 		"2015","2016","2017","2018","2019","2020",
 		".",
 		"Datum-Monat       ",//1-12
-		"0","1","2","3","4","5","6","7","8","9","10","11","12",
+		"1","2","3","4","5","6","7","8","9","10","11","12",
 		".",
 		"Datum-Tag         ",//1-31
-		"0","1","2","3","4","5","6","7","8","9",
+		"1","2","3","4","5","6","7","8","9",
 		"10","11","12","13","14","15","16","17","18","19",
 		"20", "21", "22", "23","24","25","26","27","28","29","30","31",
 		".",
+		"Zeit-Mode         ",
+		"H:M", "H:M:S",
+		".",
 		"Dauer-Zeit-Anz.   ",//1-10
-		"0","1","2","3","4","5","6","7","8","9",
+		"1","2","3","4","5","6","7","8","9",
 		".",
 		"Datum-Anzeige     ",
 		"an", "aus",
@@ -112,23 +112,29 @@ void Menu::update(long now) {
 	}
 }
 
+void Menu::saveOption() {
+	if( actOption != option[actMenu] ) {
+		dirty = true;
+		if( actMenu >= SET_TIME_HOURS && actMenu <= SET_DATE_DAY) {
+			clockDirty = true; // force rtc adjust
+		}
+	}
+	option[actMenu] = actOption;
+}
+
 void Menu::buttonReleased(uint8_t n, bool longClick) {
 	Serial.print("button ");Serial.print(n);Serial.println(longClick);
 	if( active ) {
 		redrawNeeded = true;
 		if( n==BUTTON_MENU && longClick ) {
+			saveOption();
 			Serial.println("leave menu");
 			leaveMenu();
 		}
 		if( n==BUTTON_MENU && !longClick ) {
 			// advance & save leaved menu
-			if( actOption != option[actMenu] ) {
-				dirty = true;
-				if( actMenu >= SET_TIME_HOURS && actMenu <= SET_DATE_DAY) {
-					clockDirty = true; // force rtc adjust
-				}
-			}
-			option[actMenu] = actOption;
+			saveOption();
+
 			actMenu++;
 			if( actMenu >= NMENU ) {
 				actMenu=0;
@@ -165,8 +171,8 @@ void Menu::loadOptions() {
 	option[SET_TIME_TENMIN] = n.minute()/10;
 	option[SET_TIME_ONEMIN] = n.minute()%10;
 
-	option[SET_DATE_DAY] = n.day();
-	option[SET_DATE_MON] = n.month();
+	option[SET_DATE_DAY] = n.day()-1;
+	option[SET_DATE_MON] = n.month()-1;
 	option[SET_DATE_YEAR] = n.year()-2015;
 
 	// options are loaded from eeprom
@@ -179,6 +185,7 @@ void Menu::loadOptions() {
 void Menu::enterMenu() {
 	loadOptions();
 	panel->clear();
+	clock->clear();
 	redrawNeeded=true;
 	active=true;
 }
@@ -201,14 +208,15 @@ void Menu::leaveMenu() {
 	if( clockDirty ) {
 		//uint16_t year, uint8_t month, uint8_t day,
 		// uint8_t hour =0, uint8_t min =0, uint8_t sec =0
+		Serial.println("setting rtc");
 		DateTime dt(
 				option[SET_DATE_YEAR]+2015,
-				option[SET_DATE_MON],
-				option[SET_DATE_DAY],
+				option[SET_DATE_MON]+1,
+				option[SET_DATE_DAY]+1,
 				option[SET_TIME_HOURS],
 				option[SET_TIME_TENMIN]*10+option[SET_TIME_ONEMIN]
 				);
-		//clock->adjust(dt);
+		clock->adjust(dt);
 		clockDirty = false;
 	}
 
