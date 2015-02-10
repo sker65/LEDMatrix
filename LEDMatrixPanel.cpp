@@ -106,9 +106,10 @@ LEDMatrixPanel::LEDMatrixPanel(uint8_t a, uint8_t b, uint8_t c, uint8_t d,
 	}
 	plane = 0;
 	actBuffer = 0;
-	blank=true;
 	timeColor = 0;
 	aniColor = 0;
+	timeBright = 0;
+	brightness=0;
 
 	// init text
 	col = row = 0;
@@ -191,7 +192,7 @@ void LEDMatrixPanel::updateScreen() {
 	// called periodically to refresh led matrix
 
 	disableLEDs();
-	uint16_t duration = 300; // overall brightness
+	uint16_t duration = 800; // overall brightness
 
 //	if( blank ) {
 //		blank = !blank;
@@ -255,7 +256,8 @@ void LEDMatrixPanel::updateScreen() {
 	*latport &= ~latpin;  // Latch down
 	*latport |= latpin; // Latch data loaded
 
-	duration = 800;
+	// todo brightness
+	duration = 200+brightness*200; // was 800
 	if( actBuffer==1 ) duration +=2300;
 	if( actBuffer==2 ) duration +=timeBright*800;
 

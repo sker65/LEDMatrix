@@ -53,6 +53,10 @@ public:
 		return width;
 	}
 
+	void setBrightness(volatile uint8_t brightness) {
+		this->brightness = brightness;
+	}
+
 private:
 
 	void selectPlane();
@@ -67,7 +71,7 @@ private:
 			_oe, // output enable pin
 			_a, _b, _c, _d; // row adress pins
 
-	volatile uint8_t timeBright = 0;
+	volatile uint8_t timeBright;
 	volatile uint8_t **buffptr; // array of back buffers
 
 	uint8_t planes; // planes / scanning pattern 1/16 scanning means 4 planes, 1/8 means means 3 planes
@@ -88,10 +92,9 @@ private:
 
 	volatile uint8_t actBuffer;
 
-	volatile boolean blank;
-
 	volatile uint8_t timeColor;
 	volatile uint8_t aniColor;
+	volatile uint8_t brightness;
 
 };
 
